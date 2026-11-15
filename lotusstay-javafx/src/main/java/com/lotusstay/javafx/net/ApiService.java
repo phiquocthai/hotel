@@ -880,6 +880,7 @@ public class ApiService {
                 }
             }
             p.active = !n.has("active") || n.get("active").asBoolean();
+            p.status = n.has("status") && !n.get("status").isNull() ? n.get("status").asText() : null;
             list.add(p);
         }
         return list;
@@ -887,6 +888,11 @@ public class ApiService {
 
     public static PageResponse<Promotion> promotionsPage(int pageNo, int pageSize, String keyword, String discountType,
             Boolean active, String sortDir) {
+        return promotionsPage(pageNo, pageSize, keyword, discountType, active, null, sortDir);
+    }
+
+    public static PageResponse<Promotion> promotionsPage(int pageNo, int pageSize, String keyword, String discountType,
+            Boolean active, String status, String sortDir) {
         int safePage = Math.max(1, pageNo);
         int safeSize = Math.max(1, pageSize);
         String sDir = (sortDir != null && sortDir.equalsIgnoreCase("desc")) ? "desc" : "asc";
@@ -902,6 +908,9 @@ public class ApiService {
         }
         if (active != null) {
             sb.append("&active=").append(active);
+        }
+        if (status != null && !status.isBlank() && !"Tất cả trạng thái".equalsIgnoreCase(status) && !"ALL".equalsIgnoreCase(status)) {
+            sb.append("&status=").append(URLEncoder.encode(status.trim(), StandardCharsets.UTF_8));
         }
 
         PageResponse<JsonNode> page = ApiClient.get(sb.toString(), new TypeReference<PageResponse<JsonNode>>() {
@@ -938,6 +947,7 @@ public class ApiService {
                 p.endDate = n.has("endDate") && !n.get("endDate").isNull() ? LocalDate.parse(n.get("endDate").asText())
                         : null;
                 p.active = !n.has("active") || n.get("active").asBoolean();
+                p.status = n.has("status") && !n.get("status").isNull() ? n.get("status").asText() : null;
                 list.add(p);
             }
         }
@@ -2204,6 +2214,9 @@ public class ApiService {
             req.put("transactionCode", transactionCode);
         if (dateStr != null && !dateStr.isBlank())
             req.put("issuedDate", dateStr);
+        if (Session.getUserId() != null)
+            req.put("staffId", Session.getUserId());
+        req.put("autoCheckOut", autoCheckout);
         req.put("autoCheckout", autoCheckout);
 
         ApiResponse<JsonNode> resp = ApiClient.post("/api/invoices", req,
@@ -2221,8 +2234,11 @@ public class ApiService {
         req.put("bookingId", bookingId);
         req.put("roomId", roomId);
         req.put("customerId", customerId);
+        if (Session.getUserId() != null)
+            req.put("staffId", Session.getUserId());
         req.put("roomAmount", roomFee != null ? roomFee : BigDecimal.ZERO);
         req.put("penaltyAmount", penaltyFee != null ? penaltyFee : BigDecimal.ZERO);
+        req.put("autoCheckOut", true);
         req.put("autoCheckout", true);
 
         try {
@@ -2301,6 +2317,9 @@ public class ApiService {
                 : (n.hasNonNull("issuedDate") ? n.get("issuedDate").asText() : "");
         inv.modifiedAt = n.hasNonNull("modifiedAt") ? n.get("modifiedAt").asText() : "";
         inv.issuedDate = inv.createdAt;
+
+        inv.staffId = n.hasNonNull("staffId") ? n.get("staffId").asLong() : null;
+        inv.staffName = n.hasNonNull("staffName") ? n.get("staffName").asText() : null;
 
         Booking b = new Booking();
         b.id = n.hasNonNull("bookingId") ? n.get("bookingId").asLong() : null;

@@ -25,6 +25,8 @@ public class InvoiceResponse {
     // Thông tin đặt phòng & khách hàng
     private Long bookingId;
     private String bookingCode;
+    private Long staffId;
+    private String staffName;
     private Long customerId;
     private String customerName;
     private String customerPhone;

@@ -12,6 +12,7 @@ public class Promotion {
     public LocalDate startDate;
     public LocalDate endDate;
     public Boolean active;
+    public String status;
 
     public String discountTypeDisplay() {
         if ("PHAN_TRAM".equalsIgnoreCase(discountType)) return "Phần trăm (%)";
@@ -38,15 +39,15 @@ public class Promotion {
     }
 
     public String statusDisplay() {
-        if (active != null && !active) return "Tạm ngưng";
         if (isExpired()) return "Đã hết hạn";
+        if (active != null && !active) return "Tạm ngưng";
         if (isUpcoming()) return "Sắp diễn ra";
-        return "Đang áp dụng";
+        return status != null && !status.isBlank() ? status : "Đang áp dụng";
     }
 
     public String badgeClass() {
-        if (active != null && !active) return "badge-bao_tri";
         if (isExpired()) return "badge-bao_tri";
+        if (active != null && !active) return "badge-bao_tri";
         if (isUpcoming()) return "badge-dang_o";
         return "badge-trong";
     }

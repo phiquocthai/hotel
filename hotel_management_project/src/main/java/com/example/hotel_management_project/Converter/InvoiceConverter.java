@@ -8,6 +8,7 @@ import com.example.hotel_management_project.Models.Entity.Booking;
 import com.example.hotel_management_project.Models.Entity.Invoice;
 import com.example.hotel_management_project.Models.Entity.Payment;
 import com.example.hotel_management_project.Models.Entity.Promotion;
+import com.example.hotel_management_project.Models.Entity.Staff;
 import com.example.hotel_management_project.Models.Enums.PaymentStatus;
 import com.example.hotel_management_project.Models.Enums.TransactionStatus;
 import org.springframework.stereotype.Component;
@@ -31,6 +32,10 @@ public class InvoiceConverter {
     }
 
     public Invoice toEntity(InvoiceRequest request, Booking booking, Promotion promotion) {
+        return toEntity(request, booking, promotion, null);
+    }
+
+    public Invoice toEntity(InvoiceRequest request, Booking booking, Promotion promotion, Staff staff) {
         BigDecimal roomAmt = request.getRoomAmount() != null ? request.getRoomAmount() : BigDecimal.ZERO;
         BigDecimal svcAmt = request.getServiceAmount() != null ? request.getServiceAmount() : BigDecimal.ZERO;
         BigDecimal penaltyAmt = request.getPenaltyAmount() != null ? request.getPenaltyAmount() : BigDecimal.ZERO;
@@ -42,6 +47,7 @@ public class InvoiceConverter {
 
         return Invoice.builder()
                 .booking(booking)
+                .staff(staff)
                 .promotion(promotion)
                 .roomAmount(roomAmt)
                 .serviceAmount(svcAmt)
@@ -70,6 +76,13 @@ public class InvoiceConverter {
                 .createdAt(entity.getCreatedAt())
                 .modifiedAt(entity.getModifiedAt())
                 .build();
+
+        // Thông tin nhân viên lập hóa đơn
+        Staff staff = entity.getStaff();
+        if (staff != null) {
+            response.setStaffId(staff.getId());
+            response.setStaffName(staff.getFullName());
+        }
 
         // Thông tin Đặt phòng & Khách hàng & Phòng
         Booking b = entity.getBooking();
@@ -144,6 +157,13 @@ public class InvoiceConverter {
     }
 
     public void updateEntity(InvoiceRequest request, Invoice entity, Promotion promotion) {
+        updateEntity(request, entity, promotion, null);
+    }
+
+    public void updateEntity(InvoiceRequest request, Invoice entity, Promotion promotion, Staff staff) {
+        if (staff != null) {
+            entity.setStaff(staff);
+        }
         if (promotion != null) {
             entity.setPromotion(promotion);
         }

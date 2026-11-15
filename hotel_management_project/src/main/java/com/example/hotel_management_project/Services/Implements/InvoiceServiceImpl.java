@@ -15,6 +15,9 @@ import com.example.hotel_management_project.Repository.*;
 import com.example.hotel_management_project.Services.InvoiceService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -37,6 +40,8 @@ public class InvoiceServiceImpl implements InvoiceService {
     private final PaymentMethodRepo paymentMethodRepo;
     private final PaymentRepo paymentRepo;
     private final BookingServiceDetailRepo bookingServiceDetailRepo;
+    private final StaffRepo staffRepo;
+    private final AuthRepo authRepo;
     private final InvoiceConverter invoiceConverter;
     private final PaymentConverter paymentConverter;
 
@@ -47,6 +52,8 @@ public class InvoiceServiceImpl implements InvoiceService {
                               PaymentMethodRepo paymentMethodRepo,
                               PaymentRepo paymentRepo,
                               BookingServiceDetailRepo bookingServiceDetailRepo,
+                              StaffRepo staffRepo,
+                              AuthRepo authRepo,
                               InvoiceConverter invoiceConverter,
                               PaymentConverter paymentConverter) {
         this.invoiceRepo = invoiceRepo;
@@ -56,6 +63,8 @@ public class InvoiceServiceImpl implements InvoiceService {
         this.paymentMethodRepo = paymentMethodRepo;
         this.paymentRepo = paymentRepo;
         this.bookingServiceDetailRepo = bookingServiceDetailRepo;
+        this.staffRepo = staffRepo;
+        this.authRepo = authRepo;
         this.invoiceConverter = invoiceConverter;
         this.paymentConverter = paymentConverter;
     }
@@ -119,6 +128,13 @@ public class InvoiceServiceImpl implements InvoiceService {
         // 4. Giảm giá
         BigDecimal discountAmount = request.getDiscountAmount();
         if (discountAmount == null) {
+            if (promotion != null) {
+                if (promotion.getEndDate() != null && promotion.getEndDate().isBefore(LocalDate.now())) {
+                    promotion.setActive(false);
+                    promotionRepo.save(promotion);
+                    promotion = null;
+                }
+            }
             if (promotion != null && Boolean.TRUE.equals(promotion.getActive())) {
                 if (promotion.getDiscountType() == DiscountType.PHAN_TRAM) {
                     BigDecimal baseForDiscount = roomAmount.add(serviceAmount);
@@ -133,14 +149,17 @@ public class InvoiceServiceImpl implements InvoiceService {
         }
         discountAmount = discountAmount.min(roomAmount.add(serviceAmount).add(penaltyAmount));
 
-        // 5. Tổng tiền
+        // 5. Tổng tiền & Nhân viên lập hóa đơn
         BigDecimal totalAmount = request.getTotalAmount();
         if (totalAmount == null) {
             totalAmount = roomAmount.add(serviceAmount).add(penaltyAmount).subtract(discountAmount).max(BigDecimal.ZERO);
         }
 
+        Staff staff = resolveStaff(request.getStaffId());
+
         Invoice invoice = Invoice.builder()
                 .booking(booking)
+                .staff(staff)
                 .promotion(promotion)
                 .roomAmount(roomAmount)
                 .serviceAmount(serviceAmount)
@@ -190,7 +209,7 @@ public class InvoiceServiceImpl implements InvoiceService {
             if (booking.getActualCheckOutTime() == null) {
                 booking.setActualCheckOutTime(LocalDateTime.now());
             }
-            if (booking.getRoom() != null) {
+            if (booking.getRoom() != null && booking.getRoom().getStatus() != RoomStatus.DANG_BAO_TRI) {
                 booking.getRoom().setStatus(RoomStatus.DANG_DON);
                 roomRepo.save(booking.getRoom());
             }
@@ -213,7 +232,14 @@ public class InvoiceServiceImpl implements InvoiceService {
             promotion = promotionRepo.findByCode(request.getPromotionCode().trim()).orElse(null);
         }
 
-        invoiceConverter.updateEntity(request, invoice, promotion);
+        Staff staff = null;
+        if (request.getStaffId() != null) {
+            staff = staffRepo.findById(request.getStaffId()).orElse(null);
+        } else if (invoice.getStaff() == null) {
+            staff = resolveStaff(null);
+        }
+
+        invoiceConverter.updateEntity(request, invoice, promotion, staff);
         Invoice saved = invoiceRepo.save(invoice);
         return invoiceConverter.toResponse(saved, true);
     }
@@ -299,7 +325,7 @@ public class InvoiceServiceImpl implements InvoiceService {
 
     @Override
     public List<InvoiceResponse> getAllInvoicesList() {
-        return invoiceRepo.findAll().stream()
+        return invoiceRepo.findAllWithDetailsList().stream()
                 .map(i -> {
                     List<Payment> payments = paymentRepo.findByInvoiceIdWithMethod(i.getId());
                     i.setPayments(payments);
@@ -360,5 +386,23 @@ public class InvoiceServiceImpl implements InvoiceService {
         }
 
         invoiceRepo.delete(invoice);
+    }
+
+    /**
+     * Xác định nhân viên lập hóa đơn:
+     * Ưu tiên staffId truyền từ request; nếu không có, tự động lấy tài khoản đang đăng nhập từ JWT.
+     */
+    private Staff resolveStaff(Long requestStaffId) {
+        if (requestStaffId != null) {
+            return staffRepo.findById(requestStaffId).orElse(null);
+        }
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.isAuthenticated() && !(auth instanceof AnonymousAuthenticationToken)) {
+            String account = auth.getName();
+            if (account != null && !account.isBlank()) {
+                return authRepo.findByUsernameOrEmailOrPhoneNumber(account).orElse(null);
+            }
+        }
+        return null;
     }
 }

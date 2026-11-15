@@ -11,6 +11,7 @@ import com.example.hotel_management_project.Models.Enums.ErrorCode;
 import com.example.hotel_management_project.Models.Enums.RoomStatus;
 import com.example.hotel_management_project.Repository.RoomRepo;
 import com.example.hotel_management_project.Repository.RoomTypeRepo;
+import com.example.hotel_management_project.Services.HotelAutomationService;
 import com.example.hotel_management_project.Services.RoomService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -27,6 +28,7 @@ public class RoomServiceImpl implements RoomService {
     private final RoomRepo roomRepo;
     private final RoomTypeRepo roomTypeRepo;
     private final RoomConverter roomConverter;
+    private final HotelAutomationService hotelAutomationService;
 
     /**
      * Thêm mới phòng
@@ -79,6 +81,7 @@ public class RoomServiceImpl implements RoomService {
      */
     @Override
     public RoomResponse getRoomById(Long id) {
+        hotelAutomationService.autoCheckoutAndCleanRooms();
         Room room = roomRepo.findById(id)
                 .orElseThrow(() -> new CustomException(ErrorCode.ROOM_NOT_FOUND));
         return roomConverter.toRoomResponse(room);
@@ -89,6 +92,9 @@ public class RoomServiceImpl implements RoomService {
      */
     @Override
     public PageResponse<RoomResponse> getAllRooms(Pageable pageable) {
+        hotelAutomationService.autoCheckoutAndCleanRooms();
+        hotelAutomationService.autoCancelNoShowBookings();
+
         Page<Room> page = roomRepo.findByActiveTrue(pageable);
         List<RoomResponse> content = page.getContent().stream()
                 .map(roomConverter::toRoomResponse)
@@ -106,6 +112,9 @@ public class RoomServiceImpl implements RoomService {
 
     @Override
     public PageResponse<RoomResponse> searchRooms(String keyword, Long roomTypeId, RoomStatus status, Pageable pageable) {
+        hotelAutomationService.autoCheckoutAndCleanRooms();
+        hotelAutomationService.autoCancelNoShowBookings();
+
         String kw = (keyword != null && !keyword.trim().isEmpty()) ? keyword.trim() : null;
         Page<Room> page = roomRepo.searchRooms(kw, roomTypeId, status, pageable);
         List<RoomResponse> content = page.getContent().stream()

@@ -29,6 +29,10 @@ public class Invoice extends BaseEntity {
     private Booking booking;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "ma_nhan_vien")
+    private Staff staff;
+
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "ma_khuyen_mai")
     private Promotion promotion;
 

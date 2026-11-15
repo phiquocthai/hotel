@@ -7,6 +7,8 @@ import com.example.hotel_management_project.Models.Enums.DiscountType;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDate;
+
 @Component
 public class PromotionConverter {
 
@@ -30,6 +32,15 @@ public class PromotionConverter {
     }
 
     public PromotionResponse toPromotionResponse(Promotion promotion) {
+        String status = "Đang áp dụng";
+        if (promotion.getEndDate() != null && promotion.getEndDate().isBefore(LocalDate.now())) {
+            status = "Đã hết hạn";
+        } else if (Boolean.FALSE.equals(promotion.getActive())) {
+            status = "Tạm ngưng";
+        } else if (promotion.getStartDate() != null && promotion.getStartDate().isAfter(LocalDate.now())) {
+            status = "Sắp diễn ra";
+        }
+
         PromotionResponse response = PromotionResponse.builder()
                 .id(promotion.getId())
                 .code(promotion.getCode())
@@ -39,6 +50,7 @@ public class PromotionConverter {
                 .startDate(promotion.getStartDate())
                 .endDate(promotion.getEndDate())
                 .active(promotion.getActive())
+                .status(status)
                 .createdAt(promotion.getCreatedAt())
                 .modifiedAt(promotion.getModifiedAt())
                 .build();

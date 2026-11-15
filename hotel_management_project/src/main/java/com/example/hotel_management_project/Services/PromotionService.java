@@ -12,6 +12,7 @@ public interface PromotionService {
     PromotionResponse updatePromotion(Long id, PromotionRequest request);
     PageResponse<PromotionResponse> getAllPromotions(Pageable pageable);
     PageResponse<PromotionResponse> searchPromotions(String keyword, String discountType, Boolean active, Pageable pageable);
+    PageResponse<PromotionResponse> searchPromotions(String keyword, String discountType, Boolean active, String status, Pageable pageable);
     List<PromotionResponse> getAllPromotions();
     void deletePromotion(Long id);
 }

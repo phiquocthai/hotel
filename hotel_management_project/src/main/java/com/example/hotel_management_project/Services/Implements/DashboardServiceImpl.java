@@ -7,6 +7,7 @@ import com.example.hotel_management_project.Models.Enums.PaymentStatus;
 import com.example.hotel_management_project.Models.Enums.RoomStatus;
 import com.example.hotel_management_project.Repository.*;
 import com.example.hotel_management_project.Services.DashboardService;
+import com.example.hotel_management_project.Services.HotelAutomationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,11 +31,14 @@ public class DashboardServiceImpl implements DashboardService {
     private final InvoiceRepo invoiceRepo;
     private final PaymentRepo paymentRepo;
     private final BookingServiceDetailRepo bookingServiceDetailRepo;
+    private final HotelAutomationService hotelAutomationService;
 
     private static final DateTimeFormatter DATE_VN = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
     @Override
     public DashboardResponse getDashboardStats() {
+        hotelAutomationService.runAutomations();
+
         LocalDate today = LocalDate.now();
 
         // 1. DỮ LIỆU CỐT LÕI

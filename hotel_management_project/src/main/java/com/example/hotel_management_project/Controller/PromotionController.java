@@ -57,10 +57,11 @@ public class PromotionController {
             @RequestParam(required = false, defaultValue = "asc") String sortDir,
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String discountType,
-            @RequestParam(required = false) Boolean active) {
+            @RequestParam(required = false) Boolean active,
+            @RequestParam(required = false) String status) {
         Sort sort = sortDir.equalsIgnoreCase("asc") ? Sort.by(sortBy).ascending() : Sort.by(sortBy).descending();
         Pageable pageable = PageRequest.of(Math.max(0, pageNo - 1), Math.max(1, pageSize), sort);
-        return promotionService.searchPromotions(keyword, discountType, active, pageable);
+        return promotionService.searchPromotions(keyword, discountType, active, status, pageable);
     }
 
     @GetMapping
@@ -71,11 +72,12 @@ public class PromotionController {
             @RequestParam(required = false, defaultValue = "asc") String sortDir,
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String discountType,
-            @RequestParam(required = false) Boolean active) {
+            @RequestParam(required = false) Boolean active,
+            @RequestParam(required = false) String status) {
         Sort sort = sortDir.equalsIgnoreCase("asc") ? Sort.by(sortBy).ascending() : Sort.by(sortBy).descending();
         Pageable pageable = PageRequest.of(Math.max(0, pageNo - 1), Math.max(1, pageSize), sort);
-        if ((keyword != null && !keyword.isBlank()) || (discountType != null && !discountType.isBlank()) || active != null) {
-            return promotionService.searchPromotions(keyword, discountType, active, pageable);
+        if ((keyword != null && !keyword.isBlank()) || (discountType != null && !discountType.isBlank()) || active != null || (status != null && !status.isBlank())) {
+            return promotionService.searchPromotions(keyword, discountType, active, status, pageable);
         }
         return promotionService.getAllPromotions(pageable);
     }

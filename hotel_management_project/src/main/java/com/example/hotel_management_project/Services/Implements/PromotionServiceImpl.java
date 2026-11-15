@@ -8,7 +8,9 @@ import com.example.hotel_management_project.DTO.Response.PromotionResponse;
 import com.example.hotel_management_project.Models.Entity.Promotion;
 import com.example.hotel_management_project.Models.Enums.ErrorCode;
 import com.example.hotel_management_project.Repository.PromotionRepo;
+import com.example.hotel_management_project.Services.HotelAutomationService;
 import com.example.hotel_management_project.Services.PromotionService;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -21,10 +23,14 @@ public class PromotionServiceImpl implements PromotionService {
 
     private final PromotionRepo promotionRepo;
     private final PromotionConverter promotionConverter;
+    private final HotelAutomationService hotelAutomationService;
 
-    public PromotionServiceImpl(PromotionRepo promotionRepo, PromotionConverter promotionConverter) {
+    public PromotionServiceImpl(PromotionRepo promotionRepo, 
+                                PromotionConverter promotionConverter,
+                                @Lazy HotelAutomationService hotelAutomationService) {
         this.promotionRepo = promotionRepo;
         this.promotionConverter = promotionConverter;
+        this.hotelAutomationService = hotelAutomationService;
     }
 
     @Override
@@ -65,8 +71,8 @@ public class PromotionServiceImpl implements PromotionService {
 
     @Override
     public PageResponse<PromotionResponse> getAllPromotions(Pageable pageable) {
-        // Entity có trường active (isActive) nên lấy các bản ghi đang active = true
-        Page<Promotion> page = promotionRepo.findByActiveTrue(pageable);
+        hotelAutomationService.autoExpirePromotions();
+        Page<Promotion> page = promotionRepo.findAll(pageable);
         List<PromotionResponse> content = page.getContent().stream()
                 .map(promotionConverter::toPromotionResponse)
                 .collect(Collectors.toList());
@@ -83,6 +89,13 @@ public class PromotionServiceImpl implements PromotionService {
 
     @Override
     public PageResponse<PromotionResponse> searchPromotions(String keyword, String discountType, Boolean active, Pageable pageable) {
+        return searchPromotions(keyword, discountType, active, null, pageable);
+    }
+
+    @Override
+    public PageResponse<PromotionResponse> searchPromotions(String keyword, String discountType, Boolean active, String status, Pageable pageable) {
+        hotelAutomationService.autoExpirePromotions();
+
         com.example.hotel_management_project.Models.Enums.DiscountType typeEnum = null;
         if (discountType != null && !discountType.isBlank()) {
             try {
@@ -95,6 +108,7 @@ public class PromotionServiceImpl implements PromotionService {
                 keyword != null && !keyword.isBlank() ? keyword.trim() : null,
                 typeEnum,
                 active,
+                status != null && !status.isBlank() ? status.trim() : null,
                 pageable
         );
         List<PromotionResponse> content = page.getContent().stream()
@@ -113,7 +127,8 @@ public class PromotionServiceImpl implements PromotionService {
 
     @Override
     public List<PromotionResponse> getAllPromotions() {
-        return promotionRepo.findByActiveTrue().stream()
+        hotelAutomationService.autoExpirePromotions();
+        return promotionRepo.findAll().stream()
                 .map(promotionConverter::toPromotionResponse)
                 .collect(Collectors.toList());
     }

@@ -122,17 +122,23 @@ public class PromotionsView {
 
             String stVal = statusFilter.getValue();
             Boolean active = null;
+            String statusParam = null;
             if ("Đang áp dụng".equals(stVal)) {
-                active = true;
+                statusParam = "DANG_AP_DUNG";
+            } else if ("Đã hết hạn".equals(stVal)) {
+                statusParam = "DA_HET_HAN";
+            } else if ("Sắp diễn ra".equals(stVal)) {
+                statusParam = "SAP_DIEN_RA";
             } else if ("Tạm ngưng".equals(stVal)) {
-                active = false;
+                statusParam = "TAM_NGUNG";
             }
 
             final String fDiscType = discType;
             final Boolean fActive = active;
+            final String fStatus = statusParam;
 
             String sDir = "ID giảm dần".equals(sortOrder.getValue()) ? "desc" : "asc";
-            Util.runAsync(() -> ApiService.promotionsPage(currentPage[0], currentPageSize[0], q, fDiscType, fActive, sDir), page -> {
+            Util.runAsync(() -> ApiService.promotionsPage(currentPage[0], currentPageSize[0], q, fDiscType, fActive, fStatus, sDir), page -> {
                 pagedData.setAll(page.getContent() != null ? page.getContent() : List.of());
                 table.scrollTo(0);
 

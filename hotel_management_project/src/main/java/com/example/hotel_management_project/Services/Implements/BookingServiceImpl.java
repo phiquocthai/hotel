@@ -16,6 +16,7 @@ import com.example.hotel_management_project.Repository.BookingRepo;
 import com.example.hotel_management_project.Repository.CustomerRepo;
 import com.example.hotel_management_project.Repository.RoomRepo;
 import com.example.hotel_management_project.Services.BookingService;
+import com.example.hotel_management_project.Services.HotelAutomationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -35,6 +36,7 @@ public class BookingServiceImpl implements BookingService {
     private final CustomerRepo customerRepo;
     private final RoomRepo roomRepo;
     private final BookingConverter bookingConverter;
+    private final HotelAutomationService hotelAutomationService;
 
     @Override
     @Transactional
@@ -60,11 +62,13 @@ public class BookingServiceImpl implements BookingService {
 
         // Nếu nhận phòng ngay (DANG_O), kiểm tra điều kiện phòng
         if (request.getStatus() == BookingStatus.DANG_O) {
-            if (room.getStatus() == RoomStatus.DANG_O) {
-                throw new CustomException(ErrorCode.ROOM_ALREADY_OCCUPIED);
+            if (room.getStatus() == RoomStatus.DANG_BAO_TRI) {
+                throw new CustomException(ErrorCode.ROOM_UNDER_MAINTENANCE);
             }
-            if (room.getStatus() != RoomStatus.TRONG) {
-                throw new CustomException(ErrorCode.ROOM_NOT_READY);
+            List<Booking> activeList = bookingRepo.findByRoomIdAndStatusIn(
+                    room.getId(), List.of(BookingStatus.DANG_O));
+            if (!activeList.isEmpty()) {
+                throw new CustomException(ErrorCode.ROOM_ALREADY_OCCUPIED);
             }
             room.setStatus(RoomStatus.DANG_O);
             if (request.getActualCheckInTime() == null) {
@@ -119,37 +123,39 @@ public class BookingServiceImpl implements BookingService {
                 if (target.getStatus() == RoomStatus.DANG_BAO_TRI) {
                     throw new CustomException(ErrorCode.ROOM_UNDER_MAINTENANCE);
                 }
-                if (target.getStatus() == RoomStatus.DANG_O) {
+                List<Booking> activeList = bookingRepo.findByRoomIdAndStatusIn(
+                        target.getId(), List.of(BookingStatus.DANG_O));
+                boolean occupiedByOther = activeList.stream()
+                        .anyMatch(b -> !b.getId().equals(booking.getId()));
+                if (occupiedByOther) {
                     throw new CustomException(ErrorCode.ROOM_ALREADY_OCCUPIED);
-                }
-                if (target.getStatus() != RoomStatus.TRONG) {
-                    throw new CustomException(ErrorCode.ROOM_NOT_READY);
                 }
             }
         }
 
         bookingConverter.updateEntity(request, booking, customer, room);
 
-        if (newStatus != null && newStatus != oldStatus) {
-            Room targetRoom = booking.getRoom();
-            if (targetRoom != null) {
-                if (newStatus == BookingStatus.DANG_O) {
-                    targetRoom.setStatus(RoomStatus.DANG_O);
-                    if (booking.getActualCheckInTime() == null) {
-                        booking.setActualCheckInTime(LocalDateTime.now());
-                    }
+        // Đồng bộ trạng thái phòng theo trạng thái đặt phòng
+        Room targetRoom = booking.getRoom();
+        if (targetRoom != null) {
+            if (booking.getStatus() == BookingStatus.DANG_O) {
+                targetRoom.setStatus(RoomStatus.DANG_O);
+                if (booking.getActualCheckInTime() == null) {
+                    booking.setActualCheckInTime(LocalDateTime.now());
+                }
+                roomRepo.save(targetRoom);
+            } else if (booking.getStatus() == BookingStatus.DA_TRA) {
+                targetRoom.setStatus(RoomStatus.DANG_DON);
+                if (booking.getActualCheckOutTime() == null) {
+                    booking.setActualCheckOutTime(LocalDateTime.now());
+                }
+                roomRepo.save(targetRoom);
+            } else if (booking.getStatus() == BookingStatus.DA_HUY) {
+                List<Booking> activeList = bookingRepo.findByRoomIdAndStatusIn(
+                        targetRoom.getId(), List.of(BookingStatus.DANG_O));
+                if (activeList.isEmpty() && targetRoom.getStatus() != RoomStatus.DANG_BAO_TRI) {
+                    targetRoom.setStatus(RoomStatus.TRONG);
                     roomRepo.save(targetRoom);
-                } else if (newStatus == BookingStatus.DA_TRA) {
-                    targetRoom.setStatus(RoomStatus.DANG_DON);
-                    if (booking.getActualCheckOutTime() == null) {
-                        booking.setActualCheckOutTime(LocalDateTime.now());
-                    }
-                    roomRepo.save(targetRoom);
-                } else if (newStatus == BookingStatus.DA_HUY) {
-                    if (targetRoom.getStatus() == RoomStatus.DANG_O) {
-                        targetRoom.setStatus(RoomStatus.TRONG);
-                        roomRepo.save(targetRoom);
-                    }
                 }
             }
         }
@@ -160,6 +166,9 @@ public class BookingServiceImpl implements BookingService {
 
     @Override
     public PageResponse<BookingResponse> getAllBookings(Pageable pageable) {
+        hotelAutomationService.autoCancelNoShowBookings();
+        hotelAutomationService.autoCheckoutAndCleanRooms();
+
         Page<Booking> page = bookingRepo.findAllWithDetails(pageable);
         List<BookingResponse> content = page.getContent().stream()
                 .map(bookingConverter::toBookingResponse)
@@ -182,6 +191,9 @@ public class BookingServiceImpl implements BookingService {
 
     @Override
     public PageResponse<BookingResponse> searchBookings(String keyword, String statusStr, Long roomTypeId, Long roomId, Pageable pageable) {
+        hotelAutomationService.autoCancelNoShowBookings();
+        hotelAutomationService.autoCheckoutAndCleanRooms();
+
         BookingStatus status = null;
         if (statusStr != null && !statusStr.isBlank() && !"Tất cả trạng thái".equalsIgnoreCase(statusStr.trim())) {
             try {
@@ -212,6 +224,9 @@ public class BookingServiceImpl implements BookingService {
 
     @Override
     public BookingResponse getBookingById(Long id) {
+        hotelAutomationService.autoCancelNoShowBookings();
+        hotelAutomationService.autoCheckoutAndCleanRooms();
+
         Booking booking = bookingRepo.findByIdWithDetails(id)
                 .orElseThrow(() -> new CustomException(ErrorCode.BOOKING_NOT_FOUND));
         return bookingConverter.toBookingResponse(booking);
@@ -231,12 +246,14 @@ public class BookingServiceImpl implements BookingService {
             if (room.getStatus() == RoomStatus.DANG_BAO_TRI) {
                 throw new CustomException(ErrorCode.ROOM_UNDER_MAINTENANCE);
             }
-            if (room.getStatus() == RoomStatus.DANG_O && booking.getStatus() != BookingStatus.DANG_O) {
+            List<Booking> activeList = bookingRepo.findByRoomIdAndStatusIn(
+                    room.getId(), List.of(BookingStatus.DANG_O));
+            boolean occupiedByOther = activeList.stream()
+                    .anyMatch(b -> !b.getId().equals(booking.getId()));
+            if (occupiedByOther) {
                 throw new CustomException(ErrorCode.ROOM_ALREADY_OCCUPIED);
             }
-            if (room.getStatus() != RoomStatus.TRONG && room.getStatus() != RoomStatus.DANG_O) {
-                throw new CustomException(ErrorCode.ROOM_NOT_READY);
-            }
+
             room.setStatus(RoomStatus.DANG_O);
             roomRepo.save(room);
         }
@@ -299,9 +316,13 @@ public class BookingServiceImpl implements BookingService {
 
         booking.setStatus(BookingStatus.DA_HUY);
 
-        if (booking.getRoom() != null && booking.getRoom().getStatus() == RoomStatus.DANG_O) {
-            booking.getRoom().setStatus(RoomStatus.TRONG);
-            roomRepo.save(booking.getRoom());
+        if (booking.getRoom() != null) {
+            List<Booking> activeList = bookingRepo.findByRoomIdAndStatusIn(
+                    booking.getRoom().getId(), List.of(BookingStatus.DANG_O));
+            if (activeList.isEmpty() && booking.getRoom().getStatus() != RoomStatus.DANG_BAO_TRI) {
+                booking.getRoom().setStatus(RoomStatus.TRONG);
+                roomRepo.save(booking.getRoom());
+            }
         }
 
         Booking saved = bookingRepo.save(booking);

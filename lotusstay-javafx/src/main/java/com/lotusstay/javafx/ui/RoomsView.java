@@ -5,8 +5,10 @@ import com.lotusstay.javafx.model.Customer;
 import com.lotusstay.javafx.model.Room;
 import com.lotusstay.javafx.model.RoomType;
 import com.lotusstay.javafx.net.ApiService;
+import javafx.application.Platform;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
+import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.collections.transformation.FilteredList;
 import javafx.geometry.Insets;
@@ -148,6 +150,8 @@ public class RoomsView {
         VBox.setVgrow(table, Priority.ALWAYS);
         table.setPlaceholder(new Label("Không có phòng nào phù hợp."));
 
+        final Runnable[] reloadAllRef = new Runnable[1];
+
         // ── Pagination Bar & Backend Query Logic ──────────────────────────────
         int[] currentPage = new int[]{1};
         int[] currentPageSize = new int[]{PaginationHelper.DEFAULT_PAGE_SIZE};
@@ -198,6 +202,7 @@ public class RoomsView {
             statusFilter.setValue("Tất cả trạng thái");
             sortOrder.setValue("ID tăng dần");
             loadRoomPage[0].accept(1);
+            if (reloadAllRef[0] != null) reloadAllRef[0].run();
         });
 
         paginationBar.getPageSizeCombo().setOnAction(e -> {
@@ -327,12 +332,16 @@ public class RoomsView {
 
                 editBtn.setOnAction(e -> {
                     Room r = getTableView().getItems().get(getIndex());
-                    openRoomDialog(r, () -> reload(masterData, null));
+                    openRoomDialog(r, () -> {
+                        if (reloadAllRef[0] != null) reloadAllRef[0].run();
+                    });
                 });
 
                 delBtn.setOnAction(e -> {
                     Room r = getTableView().getItems().get(getIndex());
-                    confirmDelete(r, () -> reload(masterData, null));
+                    confirmDelete(r, () -> {
+                        if (reloadAllRef[0] != null) reloadAllRef[0].run();
+                    });
                 });
             }
 
@@ -350,14 +359,22 @@ public class RoomsView {
         Runnable refreshGrid = () -> {
             roomGrid.getChildren().clear();
             for (Room r : filteredData) {
-                roomGrid.getChildren().add(buildDiagramCard(r, shell, () -> reload(masterData, null)));
+                roomGrid.getChildren().add(buildDiagramCard(r, shell, () -> {
+                    if (reloadAllRef[0] != null) reloadAllRef[0].run();
+                }));
             }
         };
 
         Runnable refreshAll = () -> {
             refreshGrid.run();
-            loadRoomPage[0].accept(currentPage[0]);
+            if (loadRoomPage[0] != null) {
+                loadRoomPage[0].accept(currentPage[0]);
+            }
         };
+
+        reloadAllRef[0] = () -> reload(masterData, refreshAll);
+
+        filteredData.addListener((ListChangeListener<Room>) c -> Platform.runLater(refreshGrid));
 
         // Chuyển đổi giữa Sơ đồ phòng và Bảng
         gridToggle.setOnAction(e -> {
@@ -373,11 +390,13 @@ public class RoomsView {
             gridScroll.setManaged(false);
             tableContainer.setVisible(true);
             tableContainer.setManaged(true);
-            loadRoomPage[0].accept(currentPage[0]);
+            if (loadRoomPage[0] != null) {
+                loadRoomPage[0].accept(currentPage[0]);
+            }
         });
 
         // Tải dữ liệu ban đầu
-        Runnable loadAction = () -> reload(masterData, refreshAll);
+        Runnable loadAction = reloadAllRef[0];
         loadAction.run();
 
         // Nút thêm phòng

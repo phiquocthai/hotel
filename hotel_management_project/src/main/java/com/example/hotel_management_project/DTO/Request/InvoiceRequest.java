@@ -19,6 +19,8 @@ public class InvoiceRequest {
     @NotNull(message = "Mã đặt phòng không được để trống")
     private Long bookingId;
 
+    private Long staffId;
+
     private Long promotionId;
 
     private String promotionCode;

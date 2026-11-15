@@ -10,6 +10,8 @@ public class Invoice {
     public Booking booking;      // ManyToOne
     public Customer customer;    // ManyToOne
     public Room room;            // ManyToOne
+    public Long staffId;
+    public String staffName;
     public Long stayNights = 1L;
 
     public BigDecimal roomFee = BigDecimal.ZERO;

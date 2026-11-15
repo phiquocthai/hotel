@@ -67,30 +67,35 @@ public class InvoicesView {
 
         // Top Toolbar
         TextField search = new TextField();
-        search.setPromptText("Tìm kiếm theo ID, tên khách, số phòng, SĐT, CCCD...");
-        search.setPrefWidth(320);
+        search.setPromptText("Tìm ID, tên khách, nhân viên, phòng, SĐT, CCCD...");
+        search.setMinWidth(320);
+        search.setPrefWidth(340);
         search.setStyle("-fx-background-color: #0F172A; -fx-text-fill: #FFFFFF; -fx-border-color: #334155; -fx-border-radius: 6; -fx-background-radius: 6; -fx-padding: 8 12;");
 
         ComboBox<String> statusFilter = new ComboBox<>();
         statusFilter.getItems().addAll("Tất cả thanh toán", "Đã thanh toán", "Thanh toán một phần", "Chưa thanh toán");
         statusFilter.setValue("Tất cả thanh toán");
-        statusFilter.setPrefWidth(195);
-        statusFilter.setMinWidth(190);
+        statusFilter.setPrefWidth(215);
+        statusFilter.setMinWidth(205);
         statusFilter.setStyle("-fx-background-color: #0F172A; -fx-border-color: #334155; -fx-border-radius: 6; -fx-background-radius: 6; -fx-cursor: hand;");
 
         DatePicker fromDate = new DatePicker();
         fromDate.setPromptText("Từ ngày");
-        fromDate.setPrefWidth(135);
+        fromDate.setMinWidth(150);
+        fromDate.setPrefWidth(155);
 
         DatePicker toDate = new DatePicker();
         toDate.setPromptText("Đến ngày");
-        toDate.setPrefWidth(135);
+        toDate.setMinWidth(150);
+        toDate.setPrefWidth(155);
 
         Button searchBtn = new Button("🔍 Tìm kiếm");
         searchBtn.getStyleClass().add("btn-outline");
+        searchBtn.setMinWidth(115);
 
         Button refreshBtn = new Button("🔄 Làm mới");
         refreshBtn.getStyleClass().add("btn-outline");
+        refreshBtn.setMinWidth(110);
 
         Region filterSpacer = new Region();
         HBox.setHgrow(filterSpacer, Priority.ALWAYS);
@@ -106,13 +111,14 @@ public class InvoicesView {
         TableView<Invoice> table = new TableView<>();
         table.getStyleClass().add("table-view");
         table.setItems(tableData);
+        table.setColumnResizePolicy(TableView.UNCONSTRAINED_RESIZE_POLICY);
         VBox.setVgrow(table, Priority.ALWAYS);
         table.setPlaceholder(new Label("Chưa có hóa đơn nào trong hệ thống."));
 
         TableColumn<Invoice, String> bookCodeCol = new TableColumn<>();
-        bookCodeCol.setMinWidth(110);
-        bookCodeCol.setPrefWidth(125);
-        Label bookIdHeader = new Label("ID Đặt phòng ▼");
+        bookCodeCol.setMinWidth(75);
+        bookCodeCol.setPrefWidth(85);
+        Label bookIdHeader = new Label("ID ▼");
         bookIdHeader.setStyle("-fx-font-weight: 800; -fx-cursor: hand; -fx-text-fill: #38BDF8; -fx-font-size: 13px;");
         bookCodeCol.setGraphic(bookIdHeader);
         bookCodeCol.setSortable(false);
@@ -128,13 +134,13 @@ public class InvoicesView {
             }
         });
         sortOrder.valueProperty().addListener((obs, oldV, newV) -> {
-            bookIdHeader.setText("ID Đặt phòng " + ("ID giảm dần".equals(newV) ? "▼" : "▲"));
+            bookIdHeader.setText("ID " + ("ID giảm dần".equals(newV) ? "▼" : "▲"));
             if (reloadPageRef[0] != null) reloadPageRef[0].run();
         });
 
         TableColumn<Invoice, String> nameCol = new TableColumn<>("Khách hàng");
-        nameCol.setMinWidth(170);
-        nameCol.setPrefWidth(190);
+        nameCol.setMinWidth(180);
+        nameCol.setPrefWidth(200);
         nameCol.setCellValueFactory(d -> {
             String name = d.getValue().customer != null && d.getValue().customer.fullName != null
                     ? d.getValue().customer.fullName : "Khách vãng lai";
@@ -152,25 +158,25 @@ public class InvoicesView {
         roomCol.setStyle("-fx-font-weight: 700; -fx-text-fill: #FCD34D; -fx-alignment: CENTER_LEFT;");
 
         TableColumn<Invoice, String> roomFeeCol = new TableColumn<>("Tiền phòng");
-        roomFeeCol.setMinWidth(120);
-        roomFeeCol.setPrefWidth(130);
+        roomFeeCol.setMinWidth(125);
+        roomFeeCol.setPrefWidth(135);
         roomFeeCol.setCellValueFactory(d -> new SimpleStringProperty(Util.money(d.getValue().roomFee)));
         roomFeeCol.setStyle("-fx-font-weight: 600;");
 
         TableColumn<Invoice, String> svcFeeCol = new TableColumn<>("Dịch vụ");
-        svcFeeCol.setMinWidth(110);
-        svcFeeCol.setPrefWidth(120);
+        svcFeeCol.setMinWidth(115);
+        svcFeeCol.setPrefWidth(125);
         svcFeeCol.setCellValueFactory(d -> new SimpleStringProperty(Util.money(d.getValue().serviceFee)));
         svcFeeCol.setStyle("-fx-font-weight: 600;");
 
         TableColumn<Invoice, String> penaltyCol = new TableColumn<>("Phụ thu/Phạt");
-        penaltyCol.setMinWidth(110);
-        penaltyCol.setPrefWidth(120);
+        penaltyCol.setMinWidth(115);
+        penaltyCol.setPrefWidth(125);
         penaltyCol.setCellValueFactory(d -> new SimpleStringProperty(Util.money(d.getValue().penaltyFee)));
 
         TableColumn<Invoice, String> discountCol = new TableColumn<>("Giảm giá");
-        discountCol.setMinWidth(110);
-        discountCol.setPrefWidth(120);
+        discountCol.setMinWidth(115);
+        discountCol.setPrefWidth(125);
         discountCol.setCellValueFactory(d -> new SimpleStringProperty(Util.money(d.getValue().discountFee)));
         discountCol.setStyle("-fx-text-fill: #F87171;");
 
@@ -181,14 +187,14 @@ public class InvoicesView {
         totalCol.setStyle("-fx-font-weight: 800; -fx-text-fill: #10B981; -fx-font-size: 14px;");
 
         TableColumn<Invoice, String> paidCol = new TableColumn<>("Đã thu");
-        paidCol.setMinWidth(120);
-        paidCol.setPrefWidth(130);
+        paidCol.setMinWidth(125);
+        paidCol.setPrefWidth(135);
         paidCol.setCellValueFactory(d -> new SimpleStringProperty(Util.money(d.getValue().paidAmount)));
         paidCol.setStyle("-fx-font-weight: 700; -fx-text-fill: #38BDF8;");
 
         TableColumn<Invoice, String> remainingCol = new TableColumn<>("Còn lại");
-        remainingCol.setMinWidth(120);
-        remainingCol.setPrefWidth(130);
+        remainingCol.setMinWidth(125);
+        remainingCol.setPrefWidth(135);
         remainingCol.setCellValueFactory(d -> new SimpleStringProperty(Util.money(d.getValue().remainingAmount)));
         remainingCol.setCellFactory(col -> new TableCell<>() {
             @Override
@@ -209,8 +215,8 @@ public class InvoicesView {
         });
 
         TableColumn<Invoice, String> paymentCol = new TableColumn<>("Trạng thái");
-        paymentCol.setMinWidth(175);
-        paymentCol.setPrefWidth(185);
+        paymentCol.setMinWidth(185);
+        paymentCol.setPrefWidth(195);
         paymentCol.setCellValueFactory(d -> new SimpleStringProperty(d.getValue().paymentStatusLabel()));
         paymentCol.setCellFactory(col -> new TableCell<>() {
             @Override
@@ -233,14 +239,21 @@ public class InvoicesView {
             }
         });
 
+        TableColumn<Invoice, String> staffCol = new TableColumn<>("Nhân viên");
+        staffCol.setMinWidth(160);
+        staffCol.setPrefWidth(175);
+        staffCol.setCellValueFactory(d -> new SimpleStringProperty(
+                d.getValue().staffName != null && !d.getValue().staffName.isBlank() ? d.getValue().staffName : "—"));
+        staffCol.setStyle("-fx-font-weight: 700; -fx-text-fill: #A78BFA;");
+
         TableColumn<Invoice, String> createdCol = new TableColumn<>("Ngày tạo");
-        createdCol.setMinWidth(160);
-        createdCol.setPrefWidth(165);
+        createdCol.setMinWidth(170);
+        createdCol.setPrefWidth(180);
         createdCol.setCellValueFactory(d -> new SimpleStringProperty(formatDateTime(d.getValue().createdAt)));
 
         TableColumn<Invoice, String> modifiedCol = new TableColumn<>("Ngày sửa");
-        modifiedCol.setMinWidth(150);
-        modifiedCol.setPrefWidth(155);
+        modifiedCol.setMinWidth(165);
+        modifiedCol.setPrefWidth(175);
         modifiedCol.setCellValueFactory(d -> new SimpleStringProperty(formatDateTime(d.getValue().modifiedAt)));
 
         // Pagination Bar
@@ -321,7 +334,7 @@ public class InvoicesView {
             }
         });
 
-        table.getColumns().addAll(bookCodeCol, nameCol, roomCol, roomFeeCol, svcFeeCol, penaltyCol, discountCol, totalCol, paidCol, remainingCol, paymentCol, createdCol, modifiedCol, actionCol);
+        table.getColumns().addAll(bookCodeCol, nameCol, roomCol, roomFeeCol, svcFeeCol, penaltyCol, discountCol, totalCol, paidCol, remainingCol, paymentCol, staffCol, createdCol, modifiedCol, actionCol);
 
         // Footer Summary
         HBox summaryFooter = new HBox(24);
@@ -436,7 +449,7 @@ public class InvoicesView {
 
             VBox folio = new VBox(14);
             folio.setPadding(new Insets(20));
-            folio.setPrefWidth(880);
+            folio.setPrefWidth(910);
             folio.setStyle("-fx-background-color: #141A23; -fx-background-radius: 12; -fx-border-color: #212936; -fx-border-radius: 12;");
 
             // 1. Header Khách Sạn
@@ -507,9 +520,10 @@ public class InvoicesView {
 
             customerCard.getChildren().addAll(
                     custTitle,
-                    infoLine("Họ và tên khách:", cName, "#38BDF8"),
+                    infoLine("Họ và tên khách hàng:", cName, "#38BDF8"),
                     infoLine("Số điện thoại:", cPhone, "#F8FAFC"),
-                    infoLine("Số CCCD / Hộ chiếu:", cId, "#F8FAFC")
+                    infoLine("Số CCCD / Hộ chiếu:", cId, "#F8FAFC"),
+                    infoLine("Nhân viên lập hóa đơn:", (inv.staffName != null && !inv.staffName.isBlank() ? inv.staffName : "—"), "#A78BFA")
             );
 
             // Cột Phải: Phòng & Lưu trú (ĐÃ BỎ HOÀN TOÀN ID ĐẶT PHÒNG)
@@ -528,7 +542,7 @@ public class InvoicesView {
                     infoLine("Phòng lưu trú:", rNum, "#FCD34D", true),
                     infoLine("Hạng loại phòng:", rType, "#C084FC"),
                     infoLine("Thời gian lưu trú:", formatDateSafe(inDate) + "  →  " + formatDateSafe(outDate), "#F8FAFC"),
-                    infoLine("Thời lượng ở:", nights + " đêm lưu trú", "#38BDF8")
+                    infoLine("Thời lượng lưu trú:", nights + " đêm lưu trú", "#38BDF8")
             );
 
             infoSection.getChildren().addAll(customerCard, stayCard);
@@ -911,7 +925,7 @@ public class InvoicesView {
             try (PrintWriter writer = new PrintWriter(file, StandardCharsets.UTF_8)) {
                 // BOM UTF-8 for Excel
                 writer.write('\ufeff');
-                writer.println("ID đặt phòng,Khách hàng,Số điện thoại,Số phòng,Tiền phòng,Tiền dịch vụ,Phụ thu,Giảm giá,Tổng cộng,Đã thu,Còn lại,Trạng thái,Ngày tạo,Ngày sửa");
+                writer.println("ID đặt phòng,Khách hàng,Số điện thoại,Số phòng,Tiền phòng,Tiền dịch vụ,Phụ thu,Giảm giá,Tổng cộng,Đã thu,Còn lại,Trạng thái,Nhân viên,Ngày tạo,Ngày sửa");
                 for (Invoice inv : list) {
                     String bCode = inv.booking != null && inv.booking.id != null ? String.valueOf(inv.booking.id) : "";
                     String cName = inv.customer != null && inv.customer.fullName != null ? escapeCsv(inv.customer.fullName) : "Khách vãng lai";
@@ -925,11 +939,12 @@ public class InvoicesView {
                     String paid = inv.paidAmount != null ? inv.paidAmount.toPlainString() : "0";
                     String rem = inv.remainingAmount != null ? inv.remainingAmount.toPlainString() : "0";
                     String status = inv.paymentStatusLabel();
+                    String staffName = inv.staffName != null && !inv.staffName.isBlank() ? escapeCsv(inv.staffName) : "";
                     String created = formatDateTime(inv.createdAt != null && !inv.createdAt.isBlank() ? inv.createdAt : inv.issuedDate);
                     String modified = formatDateTime(inv.modifiedAt);
 
                     writer.println(String.join(",",
-                            bCode, cName, cPhone, room, rFee, sFee, penFee, discFee, total, paid, rem, status, created, modified));
+                            bCode, cName, cPhone, room, rFee, sFee, penFee, discFee, total, paid, rem, status, staffName, created, modified));
                 }
                 Util.info("Xuất file CSV thành công tại: " + file.getAbsolutePath());
             } catch (Exception ex) {
@@ -964,9 +979,10 @@ public class InvoicesView {
 
         Label l = new Label(label);
         l.setStyle("-fx-font-size: 12.5px; -fx-text-fill: #94A3B8; -fx-font-weight: 600;");
-        l.setMinWidth(140);
-        l.setPrefWidth(140);
-        l.setMaxWidth(140);
+        l.setMinWidth(180);
+        l.setPrefWidth(180);
+        l.setMinSize(Region.USE_PREF_SIZE, Region.USE_PREF_SIZE);
+        l.setWrapText(false);
 
         Label v = new Label(value);
         if (highlight) {

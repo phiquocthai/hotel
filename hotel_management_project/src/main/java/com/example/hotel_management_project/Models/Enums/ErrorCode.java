@@ -53,6 +53,8 @@ public enum ErrorCode {
     PROMOTION_EXISTED(1081, "Khuyến mãi đã tồn tại", HttpStatus.BAD_REQUEST),
     PROMOTION_NOT_FOUND(1082, "Khuyến mãi không tồn tại", HttpStatus.BAD_REQUEST),
     INVALID_PROMOTION_DATE(1083, "Ngày kết thúc phải sau hoặc cùng ngày bắt đầu", HttpStatus.BAD_REQUEST),
+    PROMOTION_EXPIRED(1084, "Khuyến mãi đã hết hạn sử dụng", HttpStatus.BAD_REQUEST),
+    PROMOTION_NOT_ACTIVE(1085, "Khuyến mãi hiện không hoạt động", HttpStatus.BAD_REQUEST),
 
     // Payment Method
     PAYMENT_METHOD_EXISTED(1091, "Phương thức thanh toán đã tồn tại", HttpStatus.BAD_REQUEST),

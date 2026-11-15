@@ -23,6 +23,7 @@ public class PromotionResponse {
     private LocalDate startDate;
     private LocalDate endDate;
     private Boolean active;
+    private String status;
     private LocalDateTime createdAt;
     private LocalDateTime modifiedAt;
 }
