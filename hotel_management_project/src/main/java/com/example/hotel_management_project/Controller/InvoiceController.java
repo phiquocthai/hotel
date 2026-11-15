@@ -134,7 +134,7 @@ public class InvoiceController {
     public ResponseEntity<ApiResponse<Void>> deleteInvoice(@PathVariable Long id) {
         invoiceService.deleteInvoice(id);
         ApiResponse<Void> apiResponse = new ApiResponse<>();
-        apiResponse.setMessage("Xóa hóa đơn thành công");
+        apiResponse.setMessage("Hủy hóa đơn thành công");
         return ResponseEntity.ok(apiResponse);
     }
 }

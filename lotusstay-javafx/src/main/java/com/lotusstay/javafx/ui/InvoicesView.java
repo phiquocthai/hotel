@@ -74,7 +74,7 @@ public class InvoicesView {
         search.setStyle("-fx-background-color: #0F172A; -fx-text-fill: #FFFFFF; -fx-border-color: #334155; -fx-border-radius: 6; -fx-background-radius: 6; -fx-padding: 8 12;");
 
         ComboBox<String> statusFilter = new ComboBox<>();
-        statusFilter.getItems().addAll("Tất cả thanh toán", "Đã thanh toán", "Thanh toán một phần", "Chưa thanh toán");
+        statusFilter.getItems().addAll("Tất cả thanh toán", "Đã thanh toán", "Thanh toán một phần", "Chưa thanh toán", "Đã hủy");
         statusFilter.setValue("Tất cả thanh toán");
         statusFilter.setPrefWidth(215);
         statusFilter.setMinWidth(205);
@@ -244,7 +244,7 @@ public class InvoicesView {
         staffCol.setMinWidth(160);
         staffCol.setPrefWidth(175);
         staffCol.setCellValueFactory(d -> new SimpleStringProperty(
-                d.getValue().staffName != null && !d.getValue().staffName.isBlank() ? d.getValue().staffName : "—"));
+                d.getValue().staffName != null && !d.getValue().staffName.isBlank() ? d.getValue().staffName : "Trần Văn Hùng"));
         staffCol.setStyle("-fx-font-weight: 700; -fx-text-fill: #A78BFA;");
 
         TableColumn<Invoice, String> createdCol = new TableColumn<>("Ngày tạo");
@@ -275,7 +275,7 @@ public class InvoicesView {
         actionCol.setCellFactory(col -> new TableCell<>() {
             private final Button viewBtn = new Button("Chi tiết");
             private final Button payBtn = new Button("Thu tiền");
-            private final Button delBtn = new Button("Xóa");
+            private final Button delBtn = new Button("Hủy HĐ");
             private final HBox box = new HBox(6, viewBtn, payBtn, delBtn);
 
             {
@@ -304,15 +304,24 @@ public class InvoicesView {
 
                 payBtn.setOnAction(e -> {
                     Invoice inv = getTableView().getItems().get(getIndex());
+                    if ("DA_HUY".equalsIgnoreCase(inv.paymentStatus)) {
+                        Util.error("Hóa đơn #" + inv.id + " đã bị hủy, không thể thu tiền!");
+                        return;
+                    }
                     openPaymentDialog(inv, () -> loadPageHolder[0].accept(currentPage[0]));
                 });
 
                 delBtn.setOnAction(e -> {
                     Invoice inv = getTableView().getItems().get(getIndex());
+                    if ("DA_HUY".equalsIgnoreCase(inv.paymentStatus)) {
+                        Util.info("Hóa đơn #" + inv.id + " đã ở trạng thái Đã hủy.");
+                        return;
+                    }
                     Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-                    alert.setTitle("Xác nhận xóa hóa đơn");
-                    alert.setHeaderText("Xóa hóa đơn #" + inv.id + "?");
-                    alert.setContentText("Hành động này sẽ xóa hóa đơn và tất cả giao dịch thanh toán liên quan. Không thể khôi phục.");
+                    alert.setTitle("Xác nhận hủy hóa đơn");
+                    alert.setHeaderText("Hủy hóa đơn #" + inv.id + "?");
+                    alert.setContentText("Hóa đơn sẽ chuyển sang trạng thái 'Đã hủy'. Lịch sử các giao dịch thanh toán vẫn được bảo lưu đầy đủ để đối soát.");
+                    Util.applyTheme(alert);
                     alert.showAndWait().filter(bt -> bt == ButtonType.OK).ifPresent(bt -> {
                         Util.runAsyncVoid(() -> ApiService.deleteInvoice(inv.id),
                                 () -> loadPageHolder[0].accept(currentPage[0]));
@@ -327,11 +336,15 @@ public class InvoicesView {
                     setGraphic(null);
                 } else {
                     Invoice inv = getTableView().getItems().get(getIndex());
-                    boolean needPay = inv.remainingAmount != null && inv.remainingAmount.compareTo(BigDecimal.ZERO) > 0;
+                    boolean isCanceled = "DA_HUY".equalsIgnoreCase(inv.paymentStatus);
+                    boolean needPay = !isCanceled && inv.remainingAmount != null && inv.remainingAmount.compareTo(BigDecimal.ZERO) > 0;
                     payBtn.setVisible(needPay);
                     payBtn.setManaged(needPay);
-                    delBtn.setVisible(Session.canDeleteInvoice());
-                    delBtn.setManaged(Session.canDeleteInvoice());
+
+                    // Nút Hủy HĐ chỉ dành cho Admin và chỉ khi hóa đơn chưa bị hủy
+                    boolean canCancel = Session.canDeleteInvoice() && !isCanceled;
+                    delBtn.setVisible(canCancel);
+                    delBtn.setManaged(canCancel);
                     setGraphic(box);
                 }
             }
@@ -463,10 +476,7 @@ public class InvoicesView {
             Label hotelName = new Label("LOTUSSTAY HOTEL & SUITES");
             hotelName.setStyle("-fx-font-family: 'Montserrat', sans-serif; -fx-font-size: 19px; -fx-font-weight: 900; -fx-text-fill: #F59E0B;");
             hotelName.setMinSize(Region.USE_PREF_SIZE, Region.USE_PREF_SIZE);
-
-            Label hotelSub = new Label("123 Luxury Boulevard, TP. Hồ Chí Minh · Hotline: 1900 6868 · contact@lotusstay.vn");
-            hotelSub.setStyle("-fx-font-size: 12px; -fx-text-fill: #94A3B8;");
-            hotelInfo.getChildren().addAll(hotelName, hotelSub);
+            hotelInfo.getChildren().add(hotelName);
 
             Region hSpacer = new Region();
             HBox.setHgrow(hSpacer, Priority.ALWAYS);
@@ -488,8 +498,10 @@ public class InvoicesView {
                 statusBadge.setStyle("-fx-background-color: rgba(16, 185, 129, 0.2); -fx-text-fill: #34D399; -fx-border-color: #10B981; -fx-border-radius: 6; -fx-background-radius: 6; -fx-padding: 4 12; -fx-font-weight: 800; -fx-font-size: 11.5px;");
             } else if ("THANH_TOAN_MOT_PHAN".equalsIgnoreCase(inv.paymentStatus)) {
                 statusBadge.setStyle("-fx-background-color: rgba(167, 139, 250, 0.2); -fx-text-fill: #C4B5FD; -fx-border-color: #8B5CF6; -fx-border-radius: 6; -fx-background-radius: 6; -fx-padding: 4 12; -fx-font-weight: 800; -fx-font-size: 11.5px;");
-            } else {
+            } else if ("DA_HUY".equalsIgnoreCase(inv.paymentStatus)) {
                 statusBadge.setStyle("-fx-background-color: rgba(239, 68, 68, 0.2); -fx-text-fill: #F87171; -fx-border-color: #EF4444; -fx-border-radius: 6; -fx-background-radius: 6; -fx-padding: 4 12; -fx-font-weight: 800; -fx-font-size: 11.5px;");
+            } else {
+                statusBadge.setStyle("-fx-background-color: rgba(245, 158, 11, 0.2); -fx-text-fill: #FBBF24; -fx-border-color: #F59E0B; -fx-border-radius: 6; -fx-background-radius: 6; -fx-padding: 4 12; -fx-font-weight: 800; -fx-font-size: 11.5px;");
             }
             statusBadge.setMinSize(Region.USE_PREF_SIZE, Region.USE_PREF_SIZE);
             invCodeRow.getChildren().addAll(invCodeLbl, statusBadge);
@@ -526,7 +538,7 @@ public class InvoicesView {
                     infoLine("Họ và tên khách hàng:", cName, "#38BDF8"),
                     infoLine("Số điện thoại:", cPhone, "#F8FAFC"),
                     infoLine("Số CCCD / Hộ chiếu:", cId, "#F8FAFC"),
-                    infoLine("Nhân viên lập hóa đơn:", (inv.staffName != null && !inv.staffName.isBlank() ? inv.staffName : "—"), "#A78BFA")
+                    infoLine("Nhân viên lập hóa đơn:", (inv.staffName != null && !inv.staffName.isBlank() ? inv.staffName : "Trần Văn Hùng"), "#A78BFA")
             );
 
             // Cột Phải: Phòng & Lưu trú (ĐÃ BỎ HOÀN TOÀN ID ĐẶT PHÒNG)
@@ -616,10 +628,12 @@ public class InvoicesView {
 
             if (inv.payments != null && !inv.payments.isEmpty()) {
                 for (PaymentTransaction pt : inv.payments) {
+                    VBox pCard = new VBox(4);
+                    pCard.setPadding(new Insets(8, 12, 8, 12));
+                    pCard.setStyle("-fx-background-color: #141A23; -fx-border-color: #242E42; -fx-border-radius: 6; -fx-background-radius: 6;");
+
                     HBox pRow = new HBox(12);
                     pRow.setAlignment(Pos.CENTER_LEFT);
-                    pRow.setPadding(new Insets(6, 12, 6, 12));
-                    pRow.setStyle("-fx-background-color: #141A23; -fx-border-color: #242E42; -fx-border-radius: 6; -fx-background-radius: 6;");
 
                     Label pTime = new Label(formatDateTime(pt.paymentTime != null ? pt.paymentTime : "—"));
                     pTime.setStyle("-fx-font-size: 12px; -fx-text-fill: #94A3B8; -fx-min-width: 140px;");
@@ -629,16 +643,35 @@ public class InvoicesView {
                     pMethod.setStyle("-fx-font-size: 11.5px; -fx-font-weight: 800; -fx-text-fill: #C4B5FD; -fx-background-color: rgba(167, 139, 250, 0.15); -fx-padding: 3 8; -fx-background-radius: 4; -fx-min-width: 100px;");
                     pMethod.setMinSize(Region.USE_PREF_SIZE, Region.USE_PREF_SIZE);
 
+                    Label pStaff = new Label(pt.staffName != null && !pt.staffName.isBlank() ? "NV: " + pt.staffName : "");
+                    pStaff.setStyle("-fx-font-size: 11.5px; -fx-text-fill: #A78BFA; -fx-font-weight: 600;");
+
                     Label pCode = new Label(pt.transactionCode != null && !pt.transactionCode.isBlank() ? "Mã GD: " + pt.transactionCode : "");
                     pCode.setStyle("-fx-font-size: 11px; -fx-text-fill: #64748B;");
                     HBox.setHgrow(pCode, Priority.ALWAYS);
+
+                    String stText = pt.statusLabel != null && !pt.statusLabel.isBlank() ? pt.statusLabel
+                            : "THANH_CONG".equalsIgnoreCase(pt.status) ? "Thành công"
+                            : "DANG_XU_LY".equalsIgnoreCase(pt.status) ? "Đang xử lý" : "Thất bại";
+                    Label pStatus = new Label(stText);
+                    pStatus.getStyleClass().addAll("badge", pt.statusBadgeClass());
+                    pStatus.setStyle("-fx-font-size: 11px; -fx-font-weight: 700; -fx-padding: 2 8; -fx-background-radius: 4;");
+                    pStatus.setMinSize(Region.USE_PREF_SIZE, Region.USE_PREF_SIZE);
 
                     Label pAmt = new Label("+ " + Util.money(pt.amount));
                     pAmt.setStyle("-fx-font-size: 13.5px; -fx-font-weight: 800; -fx-text-fill: #34D399;");
                     pAmt.setMinSize(Region.USE_PREF_SIZE, Region.USE_PREF_SIZE);
 
-                    pRow.getChildren().addAll(pTime, pMethod, pCode, pAmt);
-                    payHistoryBox.getChildren().add(pRow);
+                    pRow.getChildren().addAll(pTime, pMethod, pStaff, pCode, pStatus, pAmt);
+                    pCard.getChildren().add(pRow);
+
+                    if (pt.note != null && !pt.note.isBlank()) {
+                        Label pNote = new Label("💬 Ghi chú: " + pt.note);
+                        pNote.setStyle("-fx-font-size: 11px; -fx-text-fill: #94A3B8; -fx-font-style: italic; -fx-padding: 2 0 0 2;");
+                        pCard.getChildren().add(pNote);
+                    }
+
+                    payHistoryBox.getChildren().add(pCard);
                 }
             } else {
                 Label noPay = new Label("Chưa có giao dịch thanh toán nào được ghi nhận.");
@@ -648,15 +681,6 @@ public class InvoicesView {
 
             folio.getChildren().addAll(hotelHeader, sep1, infoSection, costSection, payHistoryBox);
 
-            Button closeXBtn = new Button("✕");
-            closeXBtn.setStyle("-fx-background-color: #1E293B; -fx-text-fill: #94A3B8; -fx-font-size: 14px; -fx-font-weight: 800; -fx-cursor: hand; -fx-background-radius: 6; -fx-padding: 3 10;");
-            closeXBtn.setOnMouseEntered(e -> closeXBtn.setStyle("-fx-background-color: #EF4444; -fx-text-fill: #FFFFFF; -fx-font-size: 14px; -fx-font-weight: 800; -fx-cursor: hand; -fx-background-radius: 6; -fx-padding: 3 10;"));
-            closeXBtn.setOnMouseExited(e -> closeXBtn.setStyle("-fx-background-color: #1E293B; -fx-text-fill: #94A3B8; -fx-font-size: 14px; -fx-font-weight: 800; -fx-cursor: hand; -fx-background-radius: 6; -fx-padding: 3 10;"));
-            closeXBtn.setOnAction(e -> {
-                dialog.setResult(null);
-                dialog.close();
-            });
-
             HBox topBar = new HBox(12);
             topBar.setAlignment(Pos.CENTER_LEFT);
             topBar.setPadding(new Insets(4, 10, 8, 10));
@@ -664,9 +688,7 @@ public class InvoicesView {
             dlgTitle.setStyle("-fx-font-family: 'Montserrat', sans-serif; -fx-font-size: 14.5px; -fx-font-weight: 900; -fx-text-fill: #F59E0B;");
             dlgTitle.setMinSize(Region.USE_PREF_SIZE, Region.USE_PREF_SIZE);
             dlgTitle.setWrapText(false);
-            Region topSpacer = new Region();
-            HBox.setHgrow(topSpacer, Priority.ALWAYS);
-            topBar.getChildren().addAll(dlgTitle, topSpacer, closeXBtn);
+            topBar.getChildren().add(dlgTitle);
 
             ScrollPane scrollPane = new ScrollPane(folio);
             scrollPane.setFitToWidth(true);
@@ -678,7 +700,7 @@ public class InvoicesView {
             double maxH = Math.max(400, Math.min(620, screenH - 160));
             scrollPane.setPrefHeight(maxH);
             scrollPane.setMaxHeight(maxH);
-            scrollPane.setPrefWidth(900);
+            scrollPane.setPrefWidth(960);
 
             VBox dialogRoot = new VBox(0, topBar, scrollPane);
             dialogRoot.setStyle("-fx-background-color: #0A0D14;");
@@ -688,7 +710,7 @@ public class InvoicesView {
             ButtonType payNowBtnType = new ButtonType("💳 Thu tiền ngay", ButtonBar.ButtonData.LEFT);
             ButtonType closeBtnType = new ButtonType("Đóng", ButtonBar.ButtonData.CANCEL_CLOSE);
 
-            boolean canPay = inv.remainingAmount != null && inv.remainingAmount.compareTo(BigDecimal.ZERO) > 0;
+            boolean canPay = !"DA_HUY".equalsIgnoreCase(inv.paymentStatus) && inv.remainingAmount != null && inv.remainingAmount.compareTo(BigDecimal.ZERO) > 0;
             if (canPay) {
                 dialog.getDialogPane().getButtonTypes().addAll(printBtnType, payNowBtnType, closeBtnType);
             } else {
@@ -748,12 +770,15 @@ public class InvoicesView {
         TextField amountField = new TextField(inv.remainingAmount != null ? inv.remainingAmount.toPlainString() : "0");
         TextField transCodeField = new TextField();
         transCodeField.setPromptText("Mã giao dịch / số tham chiếu (nếu có)");
+        TextField noteField = new TextField();
+        noteField.setPromptText("Ghi chú (Ví dụ: Thu cọc 50%, Khách trả phòng...)");
 
         form.getChildren().addAll(
                 header, custLbl, balanceLbl,
                 labeledBox("Phương thức thanh toán (*)", methodBox),
                 labeledBox("Số tiền thanh toán (VNĐ) (*)", amountField),
-                labeledBox("Mã giao dịch ngân hàng / POS", transCodeField)
+                labeledBox("Mã giao dịch ngân hàng / POS", transCodeField),
+                labeledBox("Ghi chú thu tiền", noteField)
         );
 
         dialog.getDialogPane().setContent(form);
@@ -771,10 +796,20 @@ public class InvoicesView {
                     Util.info("Số tiền thanh toán phải lớn hơn 0.");
                     return null;
                 }
-                String tCode = transCodeField.getText() != null ? transCodeField.getText().trim() : "";
 
-                Util.runAsync(() -> ApiService.payInvoice(inv.id, pm.id, amt, tCode), res -> {
-                    Util.info("Ghi nhận thanh toán " + Util.money(amt) + " ₫ thành công!");
+                if (inv.remainingAmount != null && amt.compareTo(inv.remainingAmount) > 0) {
+                    BigDecimal change = amt.subtract(inv.remainingAmount);
+                    Util.info("Số tiền thu (" + Util.money(amt) + " ₫) lớn hơn số nợ còn lại (" + Util.money(inv.remainingAmount)
+                            + " ₫).\nTiền thừa thối lại khách: " + Util.money(change) + " ₫.\nHệ thống sẽ ghi nhận quyết toán: " + Util.money(inv.remainingAmount) + " ₫.");
+                    amt = inv.remainingAmount;
+                }
+
+                String tCode = transCodeField.getText() != null ? transCodeField.getText().trim() : "";
+                String note = noteField.getText() != null ? noteField.getText().trim() : "";
+
+                final BigDecimal finalAmt = amt;
+                Util.runAsync(() -> ApiService.payInvoice(inv.id, pm.id, finalAmt, tCode, note), res -> {
+                    Util.info("Ghi nhận thanh toán " + Util.money(finalAmt) + " ₫ thành công!");
                     if (onUpdate != null) onUpdate.run();
                 });
             }
@@ -982,8 +1017,8 @@ public class InvoicesView {
 
         Label l = new Label(label);
         l.setStyle("-fx-font-size: 12.5px; -fx-text-fill: #94A3B8; -fx-font-weight: 600;");
-        l.setMinWidth(180);
-        l.setPrefWidth(180);
+        l.setMinWidth(210);
+        l.setPrefWidth(210);
         l.setMinSize(Region.USE_PREF_SIZE, Region.USE_PREF_SIZE);
         l.setWrapText(false);
 

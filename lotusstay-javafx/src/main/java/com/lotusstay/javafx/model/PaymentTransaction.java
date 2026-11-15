@@ -12,6 +12,9 @@ public class PaymentTransaction {
     public String status;
     public String statusLabel;
     public String paymentTime;
+    public String note;
+    public Long staffId;
+    public String staffName;
 
     public String statusBadgeClass() {
         if ("THANH_CONG".equalsIgnoreCase(status)) return "badge-trong";

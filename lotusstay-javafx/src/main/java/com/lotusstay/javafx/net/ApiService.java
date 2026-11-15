@@ -2127,6 +2127,8 @@ public class ApiService {
                 beStatus = "THANH_TOAN_MOT_PHAN";
             else if ("Chưa thanh toán".equalsIgnoreCase(status))
                 beStatus = "CHUA_THANH_TOAN";
+            else if ("Đã hủy".equalsIgnoreCase(status))
+                beStatus = "DA_HUY";
             sb.append("&status=").append(URLEncoder.encode(beStatus, StandardCharsets.UTF_8));
         }
         if (fromDate != null) {
@@ -2175,12 +2177,15 @@ public class ApiService {
     }
 
     public static PaymentTransaction payInvoice(Long invoiceId, Long paymentMethodId, BigDecimal amount,
-            String transactionCode) {
+            String transactionCode, String note) {
         Map<String, Object> req = new HashMap<>();
         req.put("invoiceId", invoiceId);
         req.put("paymentMethodId", paymentMethodId);
         req.put("amount", amount != null ? amount : BigDecimal.ZERO);
         req.put("transactionCode", transactionCode != null ? transactionCode : "");
+        if (note != null && !note.isBlank()) {
+            req.put("note", note.trim());
+        }
 
         ApiResponse<JsonNode> resp = ApiClient.post("/api/invoices/" + invoiceId + "/pay", req,
                 new TypeReference<ApiResponse<JsonNode>>() {
@@ -2189,6 +2194,11 @@ public class ApiService {
             return mapPaymentTransaction(resp.result);
         }
         return null;
+    }
+
+    public static PaymentTransaction payInvoice(Long invoiceId, Long paymentMethodId, BigDecimal amount,
+            String transactionCode) {
+        return payInvoice(invoiceId, paymentMethodId, amount, transactionCode, null);
     }
 
     public static Invoice createInvoice(Long bookingId, BigDecimal roomFee, BigDecimal serviceFee,
@@ -2372,6 +2382,9 @@ public class ApiService {
         pt.status = n.hasNonNull("status") ? n.get("status").asText() : "THANH_CONG";
         pt.statusLabel = n.hasNonNull("statusLabel") ? n.get("statusLabel").asText() : "Thành công";
         pt.paymentTime = n.hasNonNull("paymentTime") ? n.get("paymentTime").asText() : "";
+        pt.note = n.hasNonNull("note") ? n.get("note").asText() : "";
+        pt.staffId = n.has("staffId") && !n.get("staffId").isNull() ? n.get("staffId").asLong() : null;
+        pt.staffName = n.hasNonNull("staffName") ? n.get("staffName").asText() : "";
         return pt;
     }
 

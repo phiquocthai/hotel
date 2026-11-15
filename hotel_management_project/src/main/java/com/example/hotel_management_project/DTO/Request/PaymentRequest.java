@@ -29,4 +29,8 @@ public class PaymentRequest {
     private TransactionStatus status;
 
     private LocalDateTime paymentTime;
+
+    private String note;
+
+    private Long staffId;
 }

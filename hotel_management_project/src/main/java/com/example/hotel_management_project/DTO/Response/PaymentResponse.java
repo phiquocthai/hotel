@@ -24,4 +24,7 @@ public class PaymentResponse {
     private TransactionStatus status;
     private String statusLabel;
     private LocalDateTime paymentTime;
+    private String note;
+    private Long staffId;
+    private String staffName;
 }

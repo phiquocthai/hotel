@@ -33,7 +33,7 @@ public class Payment extends BaseEntity {
     @Column(name = "so_tien", nullable = false, precision = 12, scale = 0)
     private BigDecimal amount;
 
-    @Column(name = "ma_giao_dich", length = 16)
+    @Column(name = "ma_giao_dich", length = 100)
     private String transactionCode;
 
     @Enumerated(EnumType.STRING)
@@ -43,4 +43,11 @@ public class Payment extends BaseEntity {
 
     @Column(name = "thoi_gian_thanh_toan")
     private LocalDateTime paymentTime;
+
+    @Column(name = "ghi_chu", length = 255)
+    private String note;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "ma_nhan_vien")
+    private Staff staff;
 }

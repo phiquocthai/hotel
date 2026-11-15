@@ -32,6 +32,7 @@ public class PaymentConverter {
                 .status(entity.getStatus())
                 .statusLabel(entity.getStatus() != null ? entity.getStatus().getLabel() : "")
                 .paymentTime(entity.getPaymentTime())
+                .note(entity.getNote())
                 .build();
 
         if (entity.getInvoice() != null) {
@@ -41,6 +42,11 @@ public class PaymentConverter {
         if (entity.getPaymentMethod() != null) {
             response.setPaymentMethodId(entity.getPaymentMethod().getId());
             response.setPaymentMethodName(entity.getPaymentMethod().getName());
+        }
+
+        if (entity.getStaff() != null) {
+            response.setStaffId(entity.getStaff().getId());
+            response.setStaffName(entity.getStaff().getFullName());
         }
 
         return response;

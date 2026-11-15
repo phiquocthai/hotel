@@ -77,6 +77,7 @@ public enum ErrorCode {
     INVOICE_NOT_FOUND(1131, "Hóa đơn không tồn tại", HttpStatus.BAD_REQUEST),
     INVOICE_ALREADY_PAID(1132, "Hóa đơn đã được thanh toán đầy đủ", HttpStatus.BAD_REQUEST),
     INVOICE_BOOKING_ALREADY_EXISTS(1133, "Đơn đặt phòng này đã được lập hóa đơn", HttpStatus.BAD_REQUEST),
+    INVOICE_ALREADY_CANCELLED(1134, "Hóa đơn đã bị hủy, không thể thực hiện thao tác", HttpStatus.BAD_REQUEST),
 
     // Payment
     PAYMENT_NOT_FOUND(1141, "Giao dịch thanh toán không tồn tại", HttpStatus.BAD_REQUEST);

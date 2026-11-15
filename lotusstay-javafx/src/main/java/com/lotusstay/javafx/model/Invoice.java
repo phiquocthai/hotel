@@ -27,7 +27,7 @@ public class Invoice {
     public String discountType;
     public BigDecimal discountValue;
 
-    public String paymentStatus = "CHUA_THANH_TOAN"; // CHUA_THANH_TOAN, THANH_TOAN_MOT_PHAN, DA_THANH_TOAN
+    public String paymentStatus = "CHUA_THANH_TOAN"; // CHUA_THANH_TOAN, THANH_TOAN_MOT_PHAN, DA_THANH_TOAN, DA_HUY
     public String issuedDate;
     public String createdAt;
     public String modifiedAt;
@@ -38,16 +38,19 @@ public class Invoice {
     public String paymentStatusLabel() {
         if ("DA_THANH_TOAN".equalsIgnoreCase(paymentStatus)) return "Đã thanh toán";
         if ("THANH_TOAN_MOT_PHAN".equalsIgnoreCase(paymentStatus)) return "Thanh toán một phần";
+        if ("DA_HUY".equalsIgnoreCase(paymentStatus)) return "Đã hủy";
         return "Chưa thanh toán";
     }
 
     public String badgeClass() {
         if ("DA_THANH_TOAN".equalsIgnoreCase(paymentStatus)) return "badge-trong";
         if ("THANH_TOAN_MOT_PHAN".equalsIgnoreCase(paymentStatus)) return "badge-dang_o";
+        if ("DA_HUY".equalsIgnoreCase(paymentStatus)) return "badge-bao_tri";
         return "badge-dang_don";
     }
 
     public boolean isFullyPaid() {
+        if ("DA_HUY".equalsIgnoreCase(paymentStatus)) return false;
         return "DA_THANH_TOAN".equalsIgnoreCase(paymentStatus)
                 || (total != null && paidAmount != null && paidAmount.compareTo(total) >= 0);
     }
