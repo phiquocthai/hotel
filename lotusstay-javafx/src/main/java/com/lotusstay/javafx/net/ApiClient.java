@@ -82,6 +82,9 @@ public class ApiClient {
     private static HttpResponse<String> send(HttpRequest request) {
         try {
             HttpResponse<String> resp = CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
+            if (resp.statusCode() == 403) {
+                throw new ApiException("Bạn không có quyền thực hiện hành động này.");
+            }
             if (resp.statusCode() >= 400) {
                 throw new ApiException(readError(resp));
             }

@@ -2,6 +2,7 @@ package com.lotusstay.javafx.ui;
 
 import com.lotusstay.javafx.model.RoomType;
 import com.lotusstay.javafx.net.ApiService;
+import com.lotusstay.javafx.net.Session;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -111,6 +112,8 @@ public class RoomTypesView {
         addBtn.setGraphic(IconUtils.icon("plus", 14, Color.web("#0A0D14")));
         addBtn.setMinWidth(Region.USE_PREF_SIZE);
         addBtn.setPrefWidth(160);
+        addBtn.setVisible(Session.canManageRoomTypes());
+        addBtn.setManaged(Session.canManageRoomTypes());
 
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);

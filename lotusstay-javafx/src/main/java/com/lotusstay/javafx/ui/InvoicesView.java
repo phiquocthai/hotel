@@ -3,6 +3,7 @@ package com.lotusstay.javafx.ui;
 import com.lotusstay.javafx.model.*;
 import com.lotusstay.javafx.net.ApiService;
 import com.lotusstay.javafx.net.PageResponse;
+import com.lotusstay.javafx.net.Session;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -329,6 +330,8 @@ public class InvoicesView {
                     boolean needPay = inv.remainingAmount != null && inv.remainingAmount.compareTo(BigDecimal.ZERO) > 0;
                     payBtn.setVisible(needPay);
                     payBtn.setManaged(needPay);
+                    delBtn.setVisible(Session.canDeleteInvoice());
+                    delBtn.setManaged(Session.canDeleteInvoice());
                     setGraphic(box);
                 }
             }

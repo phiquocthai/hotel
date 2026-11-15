@@ -3,6 +3,7 @@ package com.lotusstay.javafx.ui;
 import com.lotusstay.javafx.model.Staff;
 import com.lotusstay.javafx.net.ApiClient;
 import com.lotusstay.javafx.net.ApiService;
+import com.lotusstay.javafx.net.Session;
 import javafx.scene.Node;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
@@ -387,6 +388,15 @@ public class StaffView {
                     boolean active = "ACTIVE".equalsIgnoreCase(s.status);
                     lockBtn.setText(active ? "Khóa" : "Mở");
                     lockBtn.setGraphic(IconUtils.icon(active ? "lock" : "unlock", 11, javafx.scene.paint.Color.web("#F59E0B")));
+
+                    // Nếu người đăng nhập là Manager (không phải Admin) và tài khoản mục tiêu là Admin:
+                    // Vô hiệu hóa nút Sửa, Khóa, Xóa để bảo vệ an toàn cho tài khoản Admin
+                    boolean isTargetAdmin = "ADMIN".equalsIgnoreCase(s.role) || "Quản trị viên".equalsIgnoreCase(s.role);
+                    boolean canModify = Session.isAdmin() || !isTargetAdmin;
+                    editBtn.setDisable(!canModify);
+                    lockBtn.setDisable(!canModify);
+                    delBtn.setDisable(!canModify);
+
                     setGraphic(box);
                 }
             }
@@ -426,7 +436,11 @@ public class StaffView {
         phone.setPromptText("VD: 0901 234 567");
 
         ComboBox<String> roleBox = new ComboBox<>();
-        roleBox.getItems().addAll("Quản trị viên (ADMIN)", "Quản lý (MANAGER)", "Lễ tân (RECEPTION)");
+        if (Session.isAdmin()) {
+            roleBox.getItems().addAll("Quản trị viên (ADMIN)", "Quản lý (MANAGER)", "Lễ tân (RECEPTION)");
+        } else {
+            roleBox.getItems().addAll("Quản lý (MANAGER)", "Lễ tân (RECEPTION)");
+        }
         roleBox.setValue("Lễ tân (RECEPTION)");
         roleBox.setMaxWidth(Double.MAX_VALUE);
 
@@ -533,7 +547,11 @@ public class StaffView {
         TextField phone = new TextField(staff.phone != null ? staff.phone : "");
 
         ComboBox<String> roleBox = new ComboBox<>();
-        roleBox.getItems().addAll("Quản trị viên (ADMIN)", "Quản lý (MANAGER)", "Lễ tân (RECEPTION)");
+        if (Session.isAdmin()) {
+            roleBox.getItems().addAll("Quản trị viên (ADMIN)", "Quản lý (MANAGER)", "Lễ tân (RECEPTION)");
+        } else {
+            roleBox.getItems().addAll("Quản lý (MANAGER)", "Lễ tân (RECEPTION)");
+        }
         roleBox.setValue(roleToBoxValue(staff.role));
         roleBox.setMaxWidth(Double.MAX_VALUE);
 

@@ -5,6 +5,7 @@ import com.lotusstay.javafx.model.Customer;
 import com.lotusstay.javafx.model.Room;
 import com.lotusstay.javafx.model.RoomType;
 import com.lotusstay.javafx.net.ApiService;
+import com.lotusstay.javafx.net.Session;
 import javafx.application.Platform;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
@@ -90,6 +91,8 @@ public class RoomsView {
         addBtn.setGraphicTextGap(6);
         addBtn.getStyleClass().add("btn-add-room-gold");
         addBtn.setStyle("-fx-font-family: 'Montserrat', sans-serif; -fx-font-size: 13.5px; -fx-font-weight: 800; -fx-padding: 8 20; -fx-background-color: #F59E0B; -fx-text-fill: #0A0D14; -fx-background-radius: 8; -fx-cursor: hand; -fx-effect: dropshadow(gaussian, rgba(245,158,11,0.35), 8, 0, 0, 2);");
+        addBtn.setVisible(Session.canManagePhysicalRooms());
+        addBtn.setManaged(Session.canManagePhysicalRooms());
 
         topBar.getChildren().addAll(legendBox, topSpacer, viewSwitcher, addBtn);
 
@@ -348,7 +351,16 @@ public class RoomsView {
             @Override
             protected void updateItem(Void item, boolean empty) {
                 super.updateItem(item, empty);
-                setGraphic(empty ? null : box);
+                if (empty) {
+                    setGraphic(null);
+                } else {
+                    boolean canManage = Session.canManagePhysicalRooms();
+                    delBtn.setVisible(canManage);
+                    delBtn.setManaged(canManage);
+                    editBtn.setVisible(canManage);
+                    editBtn.setManaged(canManage);
+                    setGraphic(canManage ? box : null);
+                }
             }
         });
 

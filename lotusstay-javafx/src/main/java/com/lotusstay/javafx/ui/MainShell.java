@@ -110,7 +110,13 @@ public class MainShell extends BorderPane {
         addNavTo(hrNav, "attendance", "attendance", "Chấm công", true, true, false);
 
         VBox scrollContent = new VBox();
-        scrollContent.getChildren().addAll(opLabel, opNav, catLabel, catNav, hrLabel, hrNav);
+        scrollContent.getChildren().addAll(opLabel, opNav);
+        if (!catNav.getChildren().isEmpty()) {
+            scrollContent.getChildren().addAll(catLabel, catNav);
+        }
+        if (!hrNav.getChildren().isEmpty()) {
+            scrollContent.getChildren().addAll(hrLabel, hrNav);
+        }
         scrollContent.setStyle("-fx-background-color: #0A0D14; -fx-padding: 0 0 20 0;");
 
         ScrollPane scrollPane = new ScrollPane(scrollContent);
@@ -309,7 +315,30 @@ public class MainShell extends BorderPane {
             Map.entry("paymentmethods", "Danh mục phương thức thanh toán"),
             Map.entry("invoices", "Quản lý hóa đơn & tài chính"));
 
+    private boolean isKeyPermitted(String key) {
+        if (Session.getRole() == null || Session.isAdmin()) {
+            return true;
+        }
+        if ("MANAGER".equals(Session.getRole())) {
+            // Manager không được truy cập các use case chỉ của Admin: Loại phòng, Khuyến mãi, Phương thức TT
+            return !"roomtypes".equals(key) && !"promotions".equals(key) && !"paymentmethods".equals(key);
+        }
+        if ("RECEPTION".equals(Session.getRole())) {
+            // Lễ tân chỉ được truy cập các use case Vận hành theo sơ đồ Use Case
+            return switch (key) {
+                case "dashboard", "rooms", "bookings", "bookingservices", "customers", "invoices" -> true;
+                default -> false;
+            };
+        }
+        return true;
+    }
+
     public void goTo(String key) {
+        if (!isKeyPermitted(key)) {
+            Util.error("Bạn không có quyền truy cập vào mục này!");
+            goTo("dashboard");
+            return;
+        }
         navButtons.forEach((k, b) -> {
             b.getStyleClass().remove("active");
             if (b.getGraphic() instanceof StackPane sp && !sp.getChildren().isEmpty()) {
